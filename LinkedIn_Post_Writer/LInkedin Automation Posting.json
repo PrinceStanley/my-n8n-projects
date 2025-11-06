@@ -1,0 +1,241 @@
+{
+  "name": "LInkedin Automation Posting",
+  "nodes": [
+    {
+      "parameters": {
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        -2456,
+        -160
+      ],
+      "id": "bb7b2505-850f-4580-b1f4-e3f8616c4b9e",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n\t\"type\": \"object\",\n\t\"properties\": {\n\t\t\"post\": {\n\t\t\t\"type\": \"string\"\n\t\t}\n}\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        -2256,
+        64
+      ],
+      "id": "05c5c060-3f55-4133-bbc1-492a641cc375",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "url": "https://api.linkedin.com/v2/userinfo",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1824,
+        -160
+      ],
+      "id": "668dabbe-88f5-4936-a74b-2f7969a6b307",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "8kScEDeOJ2rzbw0d",
+          "name": "LinkedIn Access Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.linkedin.com/v2/ugcPosts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"author\": \"urn:li:person:{{ $json.sub }}\",\n    \"lifecycleState\": \"PUBLISHED\",\n    \"specificContent\": {\n        \"com.linkedin.ugc.ShareContent\": {\n            \"shareCommentary\": {\n                \"text\": \"{{ $('Code').item.json.output.post }}\"\n            },\n            \"shareMediaCategory\": \"NONE\"   \n        }\n    },\n    \"visibility\": {\n        \"com.linkedin.ugc.MemberNetworkVisibility\": \"PUBLIC\"\n    }\n} ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1600,
+        -160
+      ],
+      "id": "1beb00cd-26d4-4230-83fe-50e112dbddc2",
+      "name": "HTTP Request2",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "8kScEDeOJ2rzbw0d",
+          "name": "LinkedIn Access Token"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst updatedItems = items.map((item) => {\n  item.json.output.post = item.json.output.post.replace(\n    /\\n/g,\n    \"\\\\n\",\n  );\n  return item;\n});\nreturn updatedItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2048,
+        -160
+      ],
+      "id": "ac19e5e5-86a9-471c-bec9-8630369617c1",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "public": true,
+        "initialMessages": "Hi there! 👋\nMy name is Natie. How can I assist you today?",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -2736,
+        -160
+      ],
+      "id": "97154102-0659-41b7-8e88-1d6d65604a8f",
+      "name": "When chat message received",
+      "webhookId": "162be1d3-3547-4182-873a-e7713e0c6b2c"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -2512,
+        64
+      ],
+      "id": "594cc12d-7194-4c65-a588-097084a4dfba",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "mUTd1DFD7McAlAuf",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -2384,
+        64
+      ],
+      "id": "5085ac1a-f18a-4a4c-a823-49ca0ffe588b",
+      "name": "Simple Memory"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        []
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kolkata",
+    "saveDataErrorExecution": "none",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "53c35ee3-d47d-4a32-98f8-79333ee71646",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6e0434979de8c2a318488c94a0051d4e1b9f5b7633ba0e581e3be6361825ee43"
+  },
+  "id": "rF1xmjgYFZF8x9Ms",
+  "tags": []
+}
