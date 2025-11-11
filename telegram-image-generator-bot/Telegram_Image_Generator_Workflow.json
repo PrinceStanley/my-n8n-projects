@@ -1,0 +1,310 @@
+{
+  "name": "Telegram_Image_Generator_Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.channel_post.voice.file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        256,
+        0
+      ],
+      "id": "28af86d2-52f6-440b-9e47-6f6dee6d08e5",
+      "name": "Get a file",
+      "webhookId": "4d629c93-9eb3-4d91-8366-b56c854cb77f",
+      "credentials": {
+        "telegramApi": {
+          "id": "A9CYf1NpF8DYB1yQ",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.content.parts[0].text }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        704,
+        0
+      ],
+      "id": "f4178f14-14b4-4d38-adaf-589557a08e27",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "inputType": "binary",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ],
+      "id": "a6d98118-1d45-4435-a2c2-92fb68ad1dc4",
+      "name": "Transcribe a recording",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "2rK4xVijhsw2wZ9N",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "={{ $('Telegram Trigger').item.json.channel_post.chat.id }}",
+        "file": "={{ $json.data.data[0].url }}",
+        "replyMarkup": "inlineKeyboard",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1728,
+        0
+      ],
+      "id": "02e8aedb-475a-461c-8bc5-ad06056fae64",
+      "name": "Send a photo message",
+      "webhookId": "e6616273-ed75-4fbe-8367-a416d60adaac",
+      "credentials": {
+        "telegramApi": {
+          "id": "A9CYf1NpF8DYB1yQ",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        776,
+        224
+      ],
+      "id": "055e692b-6d9f-4419-8115-86600846770d",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "2rK4xVijhsw2wZ9N",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "channel_post"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        32,
+        0
+      ],
+      "id": "a6e44932-5e05-4c7a-b2eb-ef0d9845e5f4",
+      "name": "Telegram Trigger",
+      "webhookId": "f4cbd5bc-11bd-495f-980a-9bacb985cab3",
+      "credentials": {
+        "telegramApi": {
+          "id": "A9CYf1NpF8DYB1yQ",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://router.huggingface.co/nebius/v1/images/generations",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "prompt",
+              "value": "={{ $json.output }}"
+            },
+            {
+              "name": "model",
+              "value": "black-forest-labs/flux-schnell"
+            }
+          ]
+        },
+        "options": {
+          "redirect": {
+            "redirect": {}
+          },
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1280,
+        0
+      ],
+      "id": "9ef9976f-b117-488f-9d32-16d60a245467",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "dFFRlmUNpq31kWsG",
+          "name": "HuggingFace Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "fromJson",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        1504,
+        0
+      ],
+      "id": "7ba90a8e-b106-4a9f-8c02-bffa5396c233",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst updatedItems = items.map((item) => {\n  item.json.output = item.json.output.replace(\n    /\\n/g,\n    \"\\\\n\",\n  );\n  return item;\n});\nreturn updatedItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1056,
+        0
+      ],
+      "id": "7f428335-9746-4691-8d86-daf931929609",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get a file": {
+      "main": [
+        [
+          {
+            "node": "Transcribe a recording",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe a recording": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get a file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Send a photo message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "fe717a3b-fba8-4c61-855f-1cb7f68aa5e0",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0c0d437fd2adfb607be04577c57d9dac7ca2237daf90b21b8d6bdc12d06b9dc8"
+  },
+  "id": "RAihRX5maXLKD6ei",
+  "tags": []
+}
