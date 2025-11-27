@@ -396,6 +396,13 @@ This input generates a complete vertical video with:
 - Styled captions emphasizing the urgency and horror
 - Proper 9:16 aspect ratio for social media platforms
 
+**Sample Video Generated**
+
+
+https://github.com/user-attachments/assets/21d9b9e4-c7de-4ef7-a234-2f23a6f5630e
+
+
+
 The workflow automatically handles scene transitions, timing synchronization, and creates a cohesive narrative that builds tension from the initial wish to the shocking revelation.
 
 ## Video Output
