@@ -222,12 +222,15 @@ curl http://192.168.0.54:8080/health
 
 #### 6. Deploy n8n with Custom FFmpeg Image
 ```bash
-# Add n8n Helm repository
-helm repo add n8n https://8bitjunky.github.io/n8n-helm-chart/
-helm repo update
+# Pull the n8n Helm chart from OCI registry
+helm pull oci://8gears.container-registry.com/library/n8n --version 1.0.16
 
-# Create values.yaml for custom configuration
-cat <<EOF > n8n-values.yaml
+# Extract the chart
+tar -xzf n8n-1.0.16.tgz
+cd n8n
+
+# Edit the values.yaml file for custom configuration
+cat <<EOF > values.yaml
 image:
   repository: rxchi1d/n8n-ffmpeg
   tag: "1.116.2"
@@ -249,11 +252,14 @@ env:
     value: "UTC"
 EOF
 
-# Deploy n8n
-helm install n8n n8n/n8n -f n8n-values.yaml
+# Deploy n8n with Valkey password
+# Replace <valkey-password> with your actual password
+helm upgrade --install --create-namespace n8n -n n8n \
+  --set global.valkey.password="<valkey-password>" \
+  -f values.yaml .
 
 # Wait for deployment
-kubectl wait --for=condition=available --timeout=300s deployment/n8n
+kubectl wait --for=condition=available --timeout=300s deployment/n8n -n n8n
 ```
 
 #### 7. Verify Service Connectivity
