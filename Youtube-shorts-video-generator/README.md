@@ -230,27 +230,102 @@ tar -xzf n8n-1.0.16.tgz
 cd n8n
 
 # Edit the values.yaml file for custom configuration
-cat <<EOF > values.yaml
+
 image:
   repository: rxchi1d/n8n-ffmpeg
+  pullPolicy: IfNotPresent
   tag: "1.116.2"
-
-persistence:
+ingress:
   enabled: true
-  size: 20Gi
-
-service:
-  type: LoadBalancer
-  port: 5678
-
-env:
-  - name: N8N_HOST
-    value: "your-n8n-domain.com"  # Update with your domain
-  - name: WEBHOOK_URL
-    value: "https://your-n8n-domain.com/"  # Update with your domain
-  - name: GENERIC_TIMEZONE
-    value: "UTC"
-EOF
+  className: "nginx"
+  hosts:
+    - host: n8n.prodevans.india
+      paths: ["/"]
+main:
+  config:
+    n8n:
+      license:
+        activation:
+          key: <n8n-license-key>
+      log:
+        level: info
+  secret: {}
+  extraEnv:
+    N8N_LOG_LEVEL:
+      valueFrom:
+        secretKeyRef:
+          name: n8n-env
+          key: nll
+    N8N_HOST:
+      valueFrom:
+        secretKeyRef:
+          name: n8n-env
+          key: host
+    N8N_PORT:
+      valueFrom:
+        secretKeyRef:
+          name: n8n-env
+          key: port
+    WEBHOOK_URL:
+      valueFrom:
+        secretKeyRef:
+          name: n8n-env
+          key: url
+    DB_SQLITE_POOL_SIZE:
+      valueFrom:
+        secretKeyRef:
+          name: n8n-env
+          key: dsps
+    N8N_RUNNERS_ENABLED:
+      valueFrom:
+        secretKeyRef:
+          name: n8n-env
+          key: nre
+    N8N_BLOCK_ENV_ACCESS_IN_NODE:
+      valueFrom:
+        secretKeyRef:
+          name: n8n-env
+          key: nbeain
+    N8N_GIT_NODE_DISABLE_BARE_REPOS:
+      valueFrom:
+        secretKeyRef:
+          name: n8n-env
+          key: ngndbr
+    N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS:
+      valueFrom:
+        secretKeyRef:
+          name: n8n-env
+          key: nesfp
+    N8N_SECURE_COOKIE:
+      valueFrom:
+        secretKeyRef:
+          name: n8n-env
+          key: nsc
+    N8N_PROXY_HOPS:
+      valueFrom:
+        secretKeyRef:
+          name: n8n-env
+          key: nph
+  persistence:
+    enabled: true
+    type: dynamic
+    accessModes:
+      - ReadWriteOnce
+    size: 5Gi
+  replicaCount: 1
+  deploymentStrategy:
+    type: "Recreate"
+  serviceAccount:
+    create: true
+    annotations: {}
+    name: ""
+valkey:
+  enabled: true
+  architecture: standalone
+  primary:
+    persistence:
+      enabled: true
+      size: 2Gi
 
 # Deploy n8n with Valkey password
 # Replace <valkey-password> with your actual password
@@ -269,7 +344,6 @@ kubectl run test-pod --image=curlimages/curl --rm -it --restart=Never -- sh
 
 # Inside the pod, test connectivity:
 curl http://192.168.0.54:9000  # MinIO
-curl http://192.168.0.54:8080/health  # NCA-Toolkit
 curl http://192.168.0.54:8880/health  # Kokoro TTS
 ```
 
@@ -294,9 +368,9 @@ curl https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates
 ### Phase 5: n8n Configuration
 
 #### 10. Import and Configure Workflow
-1. **Access n8n**: Get the LoadBalancer IP or configure ingress
+1. **Access n8n**: Get the N8n ingress
    ```bash
-   kubectl get services n8n
+   kubectl get ing -n n8n
    ```
 
 2. **Import Workflow**: 
@@ -342,9 +416,6 @@ curl https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates
 ```bash
 # MinIO
 curl http://192.168.0.54:9000/minio/health/live
-
-# NCA-Toolkit  
-curl http://192.168.0.54:8080/health
 
 # Kokoro TTS
 curl http://192.168.0.54:8880/health
