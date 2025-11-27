@@ -370,6 +370,28 @@ For reference, the original installation steps:
 3. Submit form and wait for processing
 4. Receive completed video via Telegram
 
+### Sample Video Example
+
+The following example demonstrates the workflow's capability to generate compelling short-form content:
+
+**Input Parameters:**
+- **Idea**: "Man wishes to see his future. He sees his own funeral—and it's happening in 1 hour"
+- **Style**: "Time-slip horror" 
+- **Tone**: "Urgent, panic"
+- **Voice**: "af_jessica"
+- **Type**: "Short Form" (1080x1920)
+- **Music URL**: (blank)
+
+This input generates a complete vertical video with:
+- AI-generated script with urgent pacing and horror elements
+- Consistent time-slip horror visual style across scenes
+- Jessica voice synthesis with panicked, urgent delivery
+- Animated visuals showing the progression from wish to horrifying realization
+- Styled captions emphasizing the urgency and horror
+- Proper 9:16 aspect ratio for social media platforms
+
+The workflow automatically handles scene transitions, timing synchronization, and creates a cohesive narrative that builds tension from the initial wish to the shocking revelation.
+
 ## Video Output
 
 The system generates:
