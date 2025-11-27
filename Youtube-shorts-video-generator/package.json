@@ -1,0 +1,48 @@
+{
+  "name": "video-generator",
+  "version": "1.0.0",
+  "description": "AI-powered video creation pipeline built with n8n",
+  "main": "index.js",
+  "scripts": {
+    "start": "n8n start",
+    "dev": "n8n start --dev",
+    "build": "echo 'No build step required for n8n workflows'",
+    "test": "echo 'Testing should be done through n8n workflow execution'",
+    "import": "n8n import:workflow --input='Video generator.json'",
+    "export": "n8n export:workflow --id=WLRMbdgyVkcp1HeT --output='Video generator.json'",
+    "lint": "eslint . --ext .js,.json",
+    "validate": "node scripts/validate-workflow.js"
+  },
+  "keywords": [
+    "n8n",
+    "workflow",
+    "automation",
+    "video-generation",
+    "ai",
+    "gemini",
+    "flux",
+    "tts",
+    "video-processing",
+    "automation"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "n8n": "^1.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/video-generator.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/video-generator/issues"
+  },
+  "homepage": "https://github.com/yourusername/video-generator#readme"
+}

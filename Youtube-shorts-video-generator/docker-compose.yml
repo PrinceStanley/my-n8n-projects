@@ -1,0 +1,133 @@
+version: '3.8'
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: video-generator-n8n
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=changeme123
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678
+      - GENERIC_TIMEZONE=UTC
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./Video generator.json:/tmp/workflow.json:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - postgres
+      - redis
+      - minio
+    networks:
+      - video-generator-network
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15
+    container_name: video-generator-db
+    environment:
+      - POSTGRES_DB=n8n
+      - POSTGRES_USER=n8n
+      - POSTGRES_PASSWORD=n8n_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - video-generator-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U n8n -d n8n"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: video-generator-redis
+    volumes:
+      - redis_data:/data
+    networks:
+      - video-generator-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: video-generator-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin123
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - video-generator-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # TTS Service (Kokoro)
+  kokoro-tts:
+    image: your-registry/kokoro-tts:latest
+    container_name: video-generator-tts
+    ports:
+      - "8880:8880"
+    environment:
+      - MODEL_PATH=/models
+      - API_HOST=0.0.0.0
+      - API_PORT=8880
+    volumes:
+      - tts_models:/models
+    networks:
+      - video-generator-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # Media Processing Service
+  nca-toolkit:
+    image: your-registry/nca-toolkit:latest
+    container_name: video-generator-media
+    ports:
+      - "8080:8080"
+    environment:
+      - FFMPEG_THREADS=4
+      - MAX_CONCURRENT_JOBS=3
+      - API_HOST=0.0.0.0
+      - API_PORT=8080
+    volumes:
+      - media_cache:/tmp/media
+    networks:
+      - video-generator-network
+    restart: unless-stopped
+
+volumes:
+  n8n_data:
+  postgres_data:
+  redis_data:
+  minio_data:
+  tts_models:
+  media_cache:
+
+networks:
+  video-generator-network:
+    driver: bridge

@@ -1,0 +1,856 @@
+{
+  "name": "Video generator",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Video Generator",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Idea",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Style",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Tone",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Voice",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "af_alloy"
+                  },
+                  {
+                    "option": "af_aoede"
+                  },
+                  {
+                    "option": "af_bella"
+                  },
+                  {
+                    "option": "af_heart"
+                  },
+                  {
+                    "option": "af_jadzia"
+                  },
+                  {
+                    "option": "af_jessica"
+                  },
+                  {
+                    "option": "af_kore"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Type",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Long Form"
+                  },
+                  {
+                    "option": "Short Form"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "music_url"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        0,
+        -128
+      ],
+      "id": "04e2dc80-6d80-4f81-8bc9-e45c844e3d73",
+      "name": "On form submission",
+      "webhookId": "cd19091b-d737-43d2-9540-4f3d535142d2"
+    },
+    {
+      "parameters": {
+        "jsCode": "//grab your input type\nconst inputType = $input.first().json.Type;\n\n// base dims for each format\nconst base = {\n  'Long Form': { width: 1920, height: 1080 },\n  'Short Form': { width: 1080, height: 1920 }\n}[inputType] || { width:1280, height: 720 };\n\n//unpack\nlet { width, height } = base;\n\n//clamp height into [64,1792]\nconst MIN_H = 64, MAX_H = 1792;\nif (height < MIN_H || height > MAX_H) {\n  // keep aspect ratio\n  const ratio = width / height;\n  const clampedH = Math.min(Math.max(height, MIN_H), MAX_H);\n  height = clampedH;\n  width = Math.round( ratio * height);\n}\n\nreturn [\n  {\n    json: {\n      inputType,\n      width,\n      height,\n      quality: 'best' //flag for highest quality downstream processing\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        -128
+      ],
+      "id": "4b5652e3-ba32-48e5-9b32-84b946ea7754",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Idea:  {{ $('On form submission').item.json.Idea }}\nStyle: {{ $('On form submission').item.json.Style }}\nTone: {{ $('On form submission').item.json.Tone }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are a creative assistant that turns user provided ideas into structured, consistent, timed video scripts with visual guidance.\n\nStep-by-step follow these rules:\n\nTake the user's idea and develop a short video script(3-5 minutes).\n\nDivide the script into clearly timed segments (5-15 seconds), in this format:\n\n00:00 - 00:10: [Line of Transcript]\n\nFor each line of transcript, generate a descriptive image prompt consistent in style, tone, characters and world.\n\nUse the same visual style across all the image prompts (e.g. watercolor, cinematic, pixel art), and make it match the tone of script.\n\nMaintain narrative and visual consistency (same characters, clothing, environment unless intentionally evolving).\n\nAsk the user for:\n\nIdea or theme\n\nPreferred visual style (optional)\n\nTone (e.g. Inspirational, dark, educational)\n\nOutput must be formatted strictly following this schema (do not include the word json in your response directly the object):\n\n{\n\"unique_title\":\"\", //without special characters and nospaces\n  \"scenes\": [\n    {\n      \"id\":\"1\",\n      \"transcript\": \"First line of the video\",\n      \"image_prompt\": \"Detailed and consistent image prompt\" //make sure the images do not contain text\n    },\n    {\n      \"id\":\"2\",\n      \"transcript\": \"Second line of the video\",\n      \"image_prompt\": \"Next image description\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        448,
+        -128
+      ],
+      "id": "d03d8336-470f-4783-b5fd-b5f3c5ef00b8",
+      "name": "Generate Video Script"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        464,
+        96
+      ],
+      "id": "b2684035-613e-4dff-a9cf-15bb666ec32d",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "AZrzCwABl6cvA0ox",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n\"unique_title\":\"\",\n  \"scenes\": [\n    {\n      \"id\":\"1\",\n      \"transcript\": \"First line of the video\",\n      \"image_prompt\": \"Detailed and consistent image prompt\"\n    },\n    {\n      \"id\":\"2\",\n      \"transcript\": \"Second line of the video\",\n      \"image_prompt\": \"Next image description\"\n    }\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        592,
+        96
+      ],
+      "id": "d6ac55b4-5d8f-4416-80e8-72da19cf86e6",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "output.scenes",
+        "include": "allOtherFields",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        800,
+        -128
+      ],
+      "id": "1f63a73e-b628-4069-ace4-a9ada92b1ddb",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1024,
+        -128
+      ],
+      "id": "bc8aa352-beea-45df-a4e8-b742f8baa247",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1248,
+        -128
+      ],
+      "id": "0897e0a5-98fb-46f5-b16c-a71d67fd0b98",
+      "name": "Wait",
+      "webhookId": "09787243-dad3-4746-b1da-f59513e892a5"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://router.huggingface.co/nebius/v1/images/generations",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "prompt",
+              "value": "={{ $json[\"output.scenes\"].image_prompt }}"
+            },
+            {
+              "name": "model",
+              "value": "black-forest-labs/flux-schnell"
+            },
+            {
+              "name": "width",
+              "value": "={{ $('Code in JavaScript').item.json.width }}"
+            },
+            {
+              "name": "height",
+              "value": "={{ $('Code in JavaScript').item.json.height }}"
+            },
+            {
+              "name": "response_format",
+              "value": "b64_json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1472,
+        -128
+      ],
+      "id": "3505dc02-7d62-47aa-8f72-649618b6d457",
+      "name": "Generate image",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Vb5Dzw6tXAotDGkJ",
+          "name": "HuggingFace_rockman2025-1"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "upload",
+        "bucketName": "n8n",
+        "fileName": "={{ $('Loop Over Items').item.json.output.unique_title }}-{{ $('Loop Over Items').item.json['output.scenes'].id }}.jpg",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.s3",
+      "typeVersion": 1,
+      "position": [
+        1920,
+        -128
+      ],
+      "id": "52395cd5-5e5f-43b1-893b-42a064db59b5",
+      "name": "Upload image",
+      "credentials": {
+        "s3": {
+          "id": "bkkhnONy9sq7n6ru",
+          "name": "Minio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://192.168.0.54:8880/v1/audio/speech",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "kokoro"
+            },
+            {
+              "name": "input",
+              "value": "={{ $('Split Out').item.json['output.scenes'].transcript }}"
+            },
+            {
+              "name": "voice",
+              "value": "={{ $('On form submission').item.json.Voice }}"
+            },
+            {
+              "name": "speed",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2144,
+        -128
+      ],
+      "id": "6868e4b7-be15-456f-94cc-b50b85350b4c",
+      "name": "Generate Voiceover"
+    },
+    {
+      "parameters": {
+        "operation": "upload",
+        "bucketName": "n8n",
+        "fileName": "={{ $('Loop Over Items').item.json.output.unique_title }}-{{ $('Loop Over Items').item.json['output.scenes'].id }}.mp3",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.s3",
+      "typeVersion": 1,
+      "position": [
+        2368,
+        -128
+      ],
+      "id": "91110b5c-cce4-4776-a76a-33dd223ddad8",
+      "name": "Upload voice over",
+      "credentials": {
+        "s3": {
+          "id": "bkkhnONy9sq7n6ru",
+          "name": "Minio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://192.168.0.54:8080/v1/media/metadata",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "media_url",
+              "value": "=http://192.168.0.54:9000/n8n/{{ $('Wait').item.json.output.unique_title }}-{{ $('Wait').item.json['output.scenes'].id }}.mp3"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2592,
+        -128
+      ],
+      "id": "dd46bf4b-b367-478e-bef2-ef5b49944387",
+      "name": "Get Audio Duration",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "bbEmqwPHcMfwHKpn",
+          "name": "NCAToolkit-Header Auth account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://192.168.0.54:8080/v1/image/convert/video",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n\"image_url\": \"http://192.168.0.54:9000/n8n/{{ $('Loop Over Items').item.json.output.unique_title }}-{{ $('Loop Over Items').item.json['output.scenes'].id }}.jpg\",\n\"length\": {{ $json.response.duration }},\n\"frame_rate\": 24,\n\"zoom_speed\": 2\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2816,
+        -128
+      ],
+      "id": "b20b9119-434e-4f5f-9f59-a30715bb01ea",
+      "name": "Animate image",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "bbEmqwPHcMfwHKpn",
+          "name": "NCAToolkit-Header Auth account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "=data[0].b64_json",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1696,
+        -128
+      ],
+      "id": "ff6e500b-c28d-4882-9bf2-bac6fc84a5ef",
+      "name": "Convert to File",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "command": "=ffmpeg -y -i \"{{ $json.response }}\" -stream_loop -1 -i http://192.168.0.54:9000/n8n/{{ $('Loop Over Items').item.json.output.unique_title }}-{{ $('Loop Over Items').item.json['output.scenes'].id }}.mp3 -shortest {{ $('Loop Over Items').item.json.output.unique_title }}-{{ $('Loop Over Items').item.json['output.scenes'].id }}.mp4"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        3040,
+        -128
+      ],
+      "id": "269cb3b5-a69f-443a-be52-d259367e34e4",
+      "name": "Add Voice over to Video"
+    },
+    {
+      "parameters": {
+        "fileSelector": "={{ $('Loop Over Items').item.json.output.unique_title }}-{{ $('Loop Over Items').item.json['output.scenes'].id }}.mp4",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        3264,
+        -128
+      ],
+      "id": "e0bc0640-ede9-430a-b90c-80230500d3da",
+      "name": "Read/Write Files from Disk"
+    },
+    {
+      "parameters": {
+        "operation": "upload",
+        "bucketName": "nca-toolkit",
+        "fileName": "={{ $('Loop Over Items').item.json.output.unique_title }}-{{ $('Loop Over Items').item.json['output.scenes'].id }}.mp4",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.s3",
+      "typeVersion": 1,
+      "position": [
+        3488,
+        -64
+      ],
+      "id": "7b58d6e6-0788-48c3-99a9-4cb6b0c234ec",
+      "name": "Upload a file",
+      "credentials": {
+        "s3": {
+          "id": "bkkhnONy9sq7n6ru",
+          "name": "Minio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const { unique_title, scenes } = $(\"Generate Video Script\").first().json.output;\n// 2. Build the array of video objects\nconst arr = scenes.map(scene => ({\n  video_url: `http://192.168.0.54:9000/n8n/${unique_title}-${scene.id}.mp4`\n}));\n// 3. Return one item whose .json wraps that array\nreturn [\n  {\n    json: {\n      videos: arr\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        -320
+      ],
+      "id": "4b654437-42b7-4af0-b515-a67ad2b330af",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7bdd8be1-f126-4d8c-b384-2283f0d89503",
+              "name": "json",
+              "value": "={{ $json.videos }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1472,
+        -320
+      ],
+      "id": "0674dd32-b55e-49dc-980b-8d6f106820a4",
+      "name": "Map Video Urls"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://192.168.0.54:8080/v1/video/concatenate",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"video_urls\": {{ $json.json }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1696,
+        -320
+      ],
+      "id": "00eed36c-e9eb-4ef0-adb1-fa2e1011f94b",
+      "name": "Concatenate Scenes",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "bbEmqwPHcMfwHKpn",
+          "name": "NCAToolkit-Header Auth account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://192.168.0.54:8080/v1/video/caption",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"video_url\": \"{{ $json.response }}\",\n  \"settings\": {\n    \"line_color\": \"#FFFFFF\",\n    \"word_color\": \"#FFFF00\",\n    \"all_caps\": false,\n    \"max_words_per_line\": 3,\n    \"font_size\": 60,\n    \"bold\": false,\n    \"italic\": false,\n    \"underline\": false,\n    \"strikeout\": false,\n    \"outline_width\": 3,\n    \"shadow_offset\": 4,\n    \"style\": \"highlight\",\n    \"font_family\": \"The Bold Font\",\n    \"position\": \"bottom_center\"\n  },\n  \"id\": \"gdrive-five\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1920,
+        -320
+      ],
+      "id": "ebf57cb1-4197-4357-8efc-edc35e458254",
+      "name": "Caption video",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "bbEmqwPHcMfwHKpn",
+          "name": "NCAToolkit-Header Auth account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "bucketName": "nca-toolkit",
+        "fileKey": "=nca-toolkit/{{ $json.job_id }}_captioned.mp4"
+      },
+      "type": "n8n-nodes-base.s3",
+      "typeVersion": 1,
+      "position": [
+        2128,
+        -320
+      ],
+      "id": "71fe4722-d293-44b9-a124-84a0e7c295e6",
+      "name": "Download a file",
+      "credentials": {
+        "s3": {
+          "id": "12GazZ1RRNYAzaVk",
+          "name": "nca-toolkit-minio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendVideo",
+        "chatId": "=8284606552",
+        "binaryData": true,
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2336,
+        -320
+      ],
+      "id": "08efe769-ca98-4b1b-b180-66bd21b62eb1",
+      "name": "Send a video",
+      "webhookId": "6f7a732f-1cd3-415b-a31c-fe5ff0962122",
+      "credentials": {
+        "telegramApi": {
+          "id": "w2tVcycukziWcFzt",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Generate Video Script",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Video Script",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Generate Video Script",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Video Script": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Generate image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate image": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload image": {
+      "main": [
+        [
+          {
+            "node": "Generate Voiceover",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Voiceover": {
+      "main": [
+        [
+          {
+            "node": "Upload voice over",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload voice over": {
+      "main": [
+        [
+          {
+            "node": "Get Audio Duration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Audio Duration": {
+      "main": [
+        [
+          {
+            "node": "Animate image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Animate image": {
+      "main": [
+        [
+          {
+            "node": "Add Voice over to Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Upload image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Voice over to Video": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "Upload a file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload a file": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Map Video Urls",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map Video Urls": {
+      "main": [
+        [
+          {
+            "node": "Concatenate Scenes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Concatenate Scenes": {
+      "main": [
+        [
+          {
+            "node": "Caption video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Caption video": {
+      "main": [
+        [
+          {
+            "node": "Download a file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download a file": {
+      "main": [
+        [
+          {
+            "node": "Send a video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "085b192a-fee6-4758-9a93-0d428c73efcd",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ec8e19949d9ead388f64b4d108d86b9b64fd8ea5d739c5fc1ec067d97b9a1c44"
+  },
+  "id": "WLRMbdgyVkcp1HeT",
+  "tags": []
+}
